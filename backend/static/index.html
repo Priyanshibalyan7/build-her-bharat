@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Surveyllix</title>
+<style>
+:root{--bg:#f3f5f7;--panel:#fff;--ink:#14202b;--mute:#5d6b78;--line:#d5dce2;--accent:#0b6e8a;--accent-ink:#fff;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0f161c;--panel:#17212a;--ink:#e6edf2;--mute:#93a3b1;--line:#2a3743;--accent:#4fb3d0;--accent-ink:#06222c;color-scheme:dark}}
+*{box-sizing:border-box}
+body{margin:0;font:16px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink)}
+main{max-width:980px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:1.6rem;margin:0 0 4px}
+p.sub{margin:0 0 20px;color:var(--mute)}
+section{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;margin-bottom:16px}
+h2{font-size:1rem;margin:0 0 10px}
+input[type=text],input[type=file]{width:100%;padding:10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit}
+button{padding:10px 16px;border:0;border-radius:6px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:600;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.row{display:flex;gap:8px}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:10px}
+.bar>div{height:100%;width:0;background:var(--accent);transition:width .3s}
+video{width:100%;max-height:480px;background:#000;border-radius:6px}
+ul{list-style:none;margin:12px 0 0;padding:0}
+li{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--line)}
+li:first-child{border-top:0}
+.score{color:var(--mute);font-size:.9rem}
+a.dl{color:var(--accent);margin-left:12px}
+#msg{color:var(--mute);margin:8px 0 0;min-height:1.5em}
+</style>
+</head>
+<body>
+<main>
+<h1>Surveyllix</h1>
+<p class="sub">Ask your video anything. Get the exact second.</p>
+
+<section>
+<h2>1. Upload footage</h2>
+<div class="row">
+<input id="file" type="file" accept="video/*" aria-label="Video file">
+<button id="up">Upload and index</button>
+</div>
+<div class="bar" aria-hidden="true"><div id="prog"></div></div>
+<p id="msg" role="status"></p>
+</section>
+
+<section>
+<h2>2. Search</h2>
+<div class="row">
+<input id="q" type="text" placeholder="e.g. person in red jacket near the gate" aria-label="Search query" disabled>
+<button id="go" disabled>Search</button>
+</div>
+<ul id="res"></ul>
+</section>
+
+<section>
+<video id="player" controls></video>
+</section>
+</main>
+<script>
+let vid=null;
+const $=id=>document.getElementById(id);
+const fmt=s=>{s=Math.round(s);return String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0")};
+const say=t=>$("msg").textContent=t;
+
+$("up").onclick=async()=>{
+  const f=$("file").files[0];
+  if(!f){say("Choose a video file first.");return}
+  $("up").disabled=true;say("Uploading...");
+  const fd=new FormData();fd.append("file",f);
+  const r=await fetch("/api/upload",{method:"POST",body:fd});
+  if(!r.ok){say((await r.json()).detail||"Upload failed.");$("up").disabled=false;return}
+  vid=(await r.json()).video_id;
+  $("player").src="/api/video/"+vid;
+  poll();
+};
+
+async function poll(){
+  const s=await (await fetch("/api/status/"+vid)).json();
+  $("prog").style.width=s.progress+"%";
+  if(s.state==="ready"){say("Indexed. You can search now.");$("q").disabled=$("go").disabled=false;$("up").disabled=false;return}
+  if(s.state==="error"){say("Indexing failed: "+s.error);$("up").disabled=false;return}
+  say(s.state==="embedding"?"Analysing frames... "+s.progress+"%":"Preparing video...");
+  setTimeout(poll,1000);
+}
+
+async function search(){
+  const q=$("q").value.trim();if(!q)return;
+  $("go").disabled=true;say("Searching...");
+  const r=await fetch("/api/search",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({video_id:vid,query:q})});
+  $("go").disabled=false;
+  if(!r.ok){say((await r.json()).detail||"Search failed.");return}
+  const d=await r.json();
+  say(d.query_used!==q?'Searched for: "'+d.query_used+'"':"");
+  const ul=$("res");ul.textContent="";
+  if(!d.segments.length){ul.innerHTML="<li>No matches. Try different words.</li>";return}
+  d.segments.forEach(s=>{
+    const li=document.createElement("li");
+    const left=document.createElement("span");
+    left.innerHTML='<b></b> <span class="score"></span>';
+    left.querySelector("b").textContent=fmt(s.start)+" - "+fmt(s.end);
+    left.querySelector(".score").textContent="match "+s.score.toFixed(3);
+    const right=document.createElement("span");
+    const play=document.createElement("button");play.textContent="Play";
+    play.onclick=()=>{$("player").currentTime=s.start;$("player").play()};
+    const dl=document.createElement("a");dl.className="dl";dl.textContent="Download clip";
+    dl.href="/api/clip/"+vid+"?start="+s.start+"&end="+s.end;
+    right.append(play,dl);li.append(left,right);ul.append(li);
+  });
+}
+$("go").onclick=search;
+$("q").addEventListener("keydown",e=>{if(e.key==="Enter")search()});
+</script>
+</body>
+</html>

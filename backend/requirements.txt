@@ -1,0 +1,11 @@
+# Install torch first (CPU build): pip install torch --index-url https://download.pytorch.org/whl/cpu
+fastapi>=0.115
+uvicorn[standard]>=0.29
+python-multipart>=0.0.9
+transformers==4.46.3
+faiss-cpu>=1.8
+numpy
+pillow
+sentencepiece
+sacremoses
+imageio-ffmpeg>=0.4.9
