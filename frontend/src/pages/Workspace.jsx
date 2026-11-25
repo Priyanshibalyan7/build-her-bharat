@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Upload, Search, Play, Download, Film } from "lucide-react";
-import { uploadVideo, getStatus, searchVideo, videoUrl, clipUrl } from "../api.js";
+import { uploadVideo, getStatus, searchVideo, videoUrl, clipUrl, connectSocket } from "../api.js";
 import { ALLOWED, STAGE_LABEL, fmt } from "../util.js";
 import { logVideo, logSearch } from "../store.js";
 import Timeline from "../Timeline.jsx";
@@ -23,19 +23,22 @@ export default function Workspace() {
   const [time, setTime] = useState(0);
   const video = useRef(null);
 
-  // Poll indexing status once per second. TODO: replace with Socket.IO events when the Node server exists.
+  // Live progress over Socket.IO; a slow status check covers any event missed before the socket joined.
   useEffect(() => {
     if (stage !== "indexing" || !vid) return;
-    const timer = setInterval(async () => {
-      try {
-        const s = await getStatus(vid);
-        setProgress(s.progress);
-        setLabel(STAGE_LABEL[s.state] || s.state);
-        if (s.state === "ready") setStage("ready");
-        if (s.state === "error") { setError(s.error || "Indexing failed."); setStage("error"); }
-      } catch (e) { setError(e.message); setStage("error"); }
-    }, 1000);
-    return () => clearInterval(timer);
+    const sock = connectSocket();
+    const onProgress = (s) => {
+      if (s.videoId !== vid) return;
+      setProgress(s.progress);
+      setLabel(STAGE_LABEL[s.state] || s.state);
+      if (s.state === "ready") setStage("ready");
+      if (s.state === "error") { setError(s.error || "Indexing failed."); setStage("error"); }
+    };
+    const catchUp = () => getStatus(vid).then((s) => onProgress({ ...s, videoId: vid })).catch(() => {});
+    sock.on("progress", onProgress);
+    catchUp();
+    const timer = setInterval(catchUp, 4000);
+    return () => { sock.off("progress", onProgress); clearInterval(timer); };
   }, [stage, vid]);
 
   const pick = (f) => {

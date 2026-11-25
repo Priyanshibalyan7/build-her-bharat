@@ -1,0 +1,17 @@
+# Free, local services. Start with:  docker compose up -d
+services:
+  mongo:
+    image: mongo:7
+    ports: ["27017:27017"]
+    volumes: [mongo-data:/data/db]
+  redis:
+    image: redis:7
+    ports: ["6379:6379"]
+  minio:            # optional: only used if MINIO_ENDPOINT is set in server/.env
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    ports: ["9000:9000", "9001:9001"]
+    volumes: [minio-data:/data]
+volumes:
+  mongo-data:
+  minio-data:

@@ -3,11 +3,12 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useAuth } from "../auth.jsx";
 import { ScanFrame } from "../ui.jsx";
+import GoogleButton from "../GoogleButton.jsx";
 
 const inp = "w-full rounded-md border border-line bg-bg px-3 py-2.5 transition-shadow focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_25%,transparent)] focus:outline-none";
 
 export default function Login() {
-  const { user, login, signup, demo } = useAuth();
+  const { user, login, signup, google } = useAuth();
   const nav = useNavigate();
   const loc = useLocation();
   const to = loc.state?.from || "/app";
@@ -71,8 +72,7 @@ export default function Login() {
               {mode === "in" ? "Sign in" : "Create account"}
             </button>
           </form>
-          <button onClick={demo} className="mt-3 w-full rounded-md border border-line py-2.5 transition-colors hover:border-accent">Continue as demo user</button>
-          <p className="mt-4 text-xs text-mute">Demo sign-in: accounts are saved in this browser only.</p>
+          <GoogleButton onCredential={async (c) => { try { await google(c); } catch (x) { fail(x.message); } }} />
         </div>
       </div>
       <div className="hidden flex-col justify-center gap-6 bg-[#0b1522] p-12 lg:flex">

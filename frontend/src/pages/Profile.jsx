@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Camera, LogOut } from "lucide-react";
 import { useAuth } from "../auth.jsx";
 import { Avatar, useToast } from "../ui.jsx";
-import { store } from "../store.js";
+import { clearActivity } from "../api.js";
 
 const inp = "w-full rounded-md border border-line bg-bg px-3 py-2.5 transition-shadow focus:border-accent focus:shadow-[0_0_0_3px_color-mix(in_srgb,var(--accent)_25%,transparent)] focus:outline-none";
 const ROLES = ["Security analyst", "Analyst", "Operations manager", "Product manager", "Student"];
@@ -63,7 +63,7 @@ export default function Profile() {
           <div className="space-y-3 rounded-lg border border-line bg-panel p-6">
             <h2 className="font-semibold">Account</h2>
             <div className="flex flex-wrap gap-3">
-              <button onClick={() => { store.set("sv_videos", []); store.set("sv_searches", []); toast("Activity history cleared."); }}
+              <button onClick={() => clearActivity().then(() => toast("Activity history cleared.")).catch((e) => toast(e.message, "bad"))}
                 className="rounded-md border border-line px-4 py-2 transition-colors hover:border-accent">Clear activity history</button>
               <button onClick={() => { logout(); toast("You are signed out."); nav("/"); }}
                 className="flex items-center gap-2 rounded-md border border-bad px-4 py-2 text-bad transition-colors hover:bg-bad hover:text-on">

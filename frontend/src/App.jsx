@@ -9,16 +9,17 @@ import Workspace from "./pages/Workspace.jsx";
 import Profile from "./pages/Profile.jsx";
 
 function Protected({ children }) {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const loc = useLocation();
+  if (loading) return null;
   return user ? children : <Navigate to="/login" replace state={{ from: loc.pathname }} />;
 }
 
 export default function App() {
   return (
     <BrowserRouter>
-      <AuthProvider>
-        <ToastProvider>
+      <ToastProvider>
+        <AuthProvider>
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
@@ -29,8 +30,8 @@ export default function App() {
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </ToastProvider>
-      </AuthProvider>
+        </AuthProvider>
+      </ToastProvider>
     </BrowserRouter>
   );
 }

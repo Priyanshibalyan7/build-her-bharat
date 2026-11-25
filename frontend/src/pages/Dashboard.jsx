@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { getStats } from "../api.js";
 import { Film, Search } from "lucide-react";
 import { useAuth } from "../auth.jsx";
 import { useCountUp } from "../ui.jsx";
@@ -17,8 +19,9 @@ function Stat({ label, value, suffix = "" }) {
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const videos = store.get("sv_videos", []);
-  const searches = store.get("sv_searches", []);
+  const [data, setData] = useState({ videos: [], searches: [] });
+  useEffect(() => { getStats().then(setData).catch(() => {}); }, []);
+  const { videos, searches } = data;
   const matches = searches.reduce((a, s) => a + s.count, 0);
   const avg = searches.length ? Math.round(searches.reduce((a, s) => a + s.ms, 0) / searches.length) : 0;
   const h = new Date().getHours();

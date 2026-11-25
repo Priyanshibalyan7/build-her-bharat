@@ -1,8 +1,8 @@
-# Surveyllix frontend (React 18 + Vite + Tailwind + React Router)
+# Surveyllix frontend (React 18 + Vite + Tailwind + React Router + Socket.IO)
 
-1. Backend: `cd backend && python -m uvicorn main:app --reload`
-2. Here: `npm install` then `npm run dev`, open http://localhost:5173
+Run order (see the project README): databases -> Python ML service (8000) -> Node server (4000) -> this app.
 
-Routes: `/` landing, `/login` sign in / create account (or "Continue as demo user"), `/app` dashboard, `/app/search` video search, `/app/profile` profile.
+    npm install
+    npm run dev      # http://localhost:5173, proxies /api and /socket.io to the Node server on 4000
 
-Auth is a browser-only demo (see src/auth.jsx). Swap it for the Node/Express JWT + Google OAuth API later; src/api.js already sends a stored token.
+Optional Google sign-in: copy `.env.example` to `.env` and set `VITE_GOOGLE_CLIENT_ID` (same ID as the server's `GOOGLE_CLIENT_ID`).
